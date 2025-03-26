@@ -1,12 +1,17 @@
 package org.example;
 
+import com.google.gson.Gson;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.Scanner;
 
 public class Server {
     public static void main(String[] args) {
+        Gson gson = new Gson();
+
         try (ServerSocket serverSocket = new ServerSocket(9090)) {
             System.out.println("Ожидание подключения...");
             Socket socket = serverSocket.accept();
@@ -16,17 +21,20 @@ public class Server {
             // В отдельном потоке слушаем клиента
             new Thread(() -> {
                 String message = "";
-                while (true) {
+                while (clientHandler.isConnected()) {
                     message = clientHandler.checkMessage();
 
-                    // Если клиент отключается, то больше его не слушаем
-                    if (message.equals("/end")) {
-                        System.out.println("Клиент отключился!");
-                        clientHandler.finish();
-                        break;
-                    }
+//                    HashMap<String, String> data = gson.fromJson(message, HashMap.class);
+//                    if (data.containsKey("code")) {
+//                        clientHandler.sendMessage(new HashMap<String, String>().put("code", "ok"));
+//                    }
 
                     System.out.println("client: " + message);
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }).start();
 

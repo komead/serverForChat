@@ -48,4 +48,8 @@ public class ClientHandler {
             e.printStackTrace();
         }
     }
+
+    public boolean isConnected() {
+        return !socket.isClosed();
+    }
 }
