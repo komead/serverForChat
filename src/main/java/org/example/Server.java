@@ -6,7 +6,7 @@ import java.net.Socket;
 import java.util.Scanner;
 
 public class Server {
-    public static void main(String[] args) {
+    public void start() {
         try (ServerSocket serverSocket = new ServerSocket(9090)) {
             System.out.println("Ожидание подключения...");
             Socket socket = serverSocket.accept();
