@@ -1,5 +1,6 @@
 package org.example;
 
+import org.example.controller.MainController;
 import org.flywaydb.core.Flyway;
 
 public class Main {
@@ -19,6 +20,6 @@ public class Main {
         // Запуск миграций
         flyway.migrate();
 
-        new Server().start();
+        new MainController().start();
     }
 }
