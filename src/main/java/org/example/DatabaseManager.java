@@ -1,9 +1,6 @@
 package org.example;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 public class DatabaseManager {
     private final String url = "jdbc:mysql://localhost:3306/chat";
@@ -21,9 +18,13 @@ public class DatabaseManager {
         return DatabaseManagerHolder.instance;
     }
 
-    public void connect() throws SQLException {
-        connection = DriverManager.getConnection(url, user, password);
-        statement = connection.createStatement();
+    public void connect() {
+        try {
+            connection = DriverManager.getConnection(url, user, password);
+            statement = connection.createStatement();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public void disconnect() throws SQLException {
@@ -31,7 +32,13 @@ public class DatabaseManager {
         connection.close();
     }
 
-    public void execute(String request) throws SQLException {
-        statement.execute(request);
+    public ResultSet execute(String request) {
+        ResultSet result = null;
+        try {
+            result = statement.executeQuery(request);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return result;
     }
 }

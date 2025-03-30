@@ -20,6 +20,8 @@ public class Main {
         // Запуск миграций
         flyway.migrate();
 
+        System.out.println("Сервер запущен");
+
         new MainController().start();
     }
 }
