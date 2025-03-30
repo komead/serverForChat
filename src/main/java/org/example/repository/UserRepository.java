@@ -15,15 +15,36 @@ public class UserRepository {
         ResultSet resultSet = databaseManager.execute("select * from users where username = '" + username + "';");
 
         try {
-            while (resultSet.next()) {
-                user.setId(resultSet.getInt("id"));
-                user.setUsername(resultSet.getString("username"));
-                user.setPassword(resultSet.getString("password"));
+            if (!resultSet.next()) {
+                return null;
+            } else {
+                do {
+                    user.setId(resultSet.getInt("id"));
+                    user.setUsername(resultSet.getString("username"));
+                    user.setPassword(resultSet.getString("password"));
+                } while (resultSet.next());
             }
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
         }
         return user;
+    }
+
+    public void createUser(User user) {
+        ResultSet resultSet = databaseManager.execute("insert into users(username, password) values('" + user.getUsername() + "','" + user.getPassword() + "');");
+    }
+
+    public boolean userIsExist(String username) {
+        ResultSet resultSet = databaseManager.execute("select * from users where username = '" + username + "';");
+
+        try {
+            if (resultSet.next()) {
+                return true;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return false;
     }
 }

@@ -3,6 +3,7 @@ package org.example;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.Socket;
 
 public class ClientHandler {
@@ -10,46 +11,64 @@ public class ClientHandler {
     private DataOutputStream outputStream;
     private DataInputStream inputStream;
 
-    public ClientHandler(Socket socket) {
+    private boolean authorized = false;
+
+    public void connect(Socket socket) {
         try {
             this.socket = socket;
-            inputStream = new DataInputStream(this.socket.getInputStream());
-            outputStream = new DataOutputStream(this.socket.getOutputStream());
+            inputStream = new DataInputStream(socket.getInputStream());
+            outputStream = new DataOutputStream(socket.getOutputStream());
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public String checkMessage() {
+    public String checkMessage() throws IOException {
         String receivedMessage = "";
-        try {
-            receivedMessage = inputStream.readUTF();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        receivedMessage = inputStream.readUTF();
 
         return receivedMessage;
     }
 
     public void finish() {
         try {
-            inputStream.close();
-            outputStream.close();
-            socket.close();
+            if (inputStream != null)
+                inputStream.close();
+
+            if (outputStream != null)
+                outputStream.close();
+
+            if (socket != null)
+                socket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void sendMessage(String message) {
-        try {
-            outputStream.writeUTF(message);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public void sendMessage(String message) throws IOException {
+        outputStream.writeUTF(message);
     }
 
-    public boolean isConnected() {
-        return !socket.isClosed();
+    public boolean isConnected() throws ConnectException {
+        if (socket == null)
+            throw new NullPointerException("Клиент недоступен");
+
+        if (socket.isClosed())
+            throw new ConnectException("Нет соединения с клиентом");
+
+        return true;
+    }
+
+    public void reconnect() throws IOException {
+        finish();
+        connect(socket);
+    }
+
+    public boolean isAuthorized() {
+        return authorized;
+    }
+
+    public void setAuthorized(boolean authorized) {
+        this.authorized = authorized;
     }
 }
