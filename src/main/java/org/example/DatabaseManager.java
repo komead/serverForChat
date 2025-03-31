@@ -32,7 +32,10 @@ public class DatabaseManager {
         connection.close();
     }
 
-    public ResultSet execute(String request) {
+    /**
+     * Метод для извлечения данных из базы.
+     */
+    public ResultSet select(String request) {
         ResultSet result = null;
         try {
             result = statement.executeQuery(request);
@@ -40,5 +43,16 @@ public class DatabaseManager {
             e.printStackTrace();
         }
         return result;
+    }
+
+    /**
+     * Метод для изменений данных в базе.
+     */
+    public void insert(String request) {
+        try {
+            statement.execute(request);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }

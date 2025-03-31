@@ -38,7 +38,7 @@ public class MainController {
         try (ServerSocket serverSocket = new ServerSocket(9090)) {
             while (true) {
                 Socket socket = serverSocket.accept();
-                System.out.println("Клиент подключён");
+                System.out.println("Подключён новый клиент");
 
                 // В отдельном потоке слушаем клиента
                 new Thread(() -> {
@@ -54,9 +54,8 @@ public class MainController {
                             message = clientHandler.checkMessage();
                             System.out.println(message);
                         } catch (IOException e) {
-                            System.out.println("Ошибка подключения к клиенту");
+                            System.out.println("Клиент " + clientHandler.getUsername() + " отключился");
                             clientHandler.finish();
-                            e.printStackTrace();
                             break;
                         }
                         messageMap = gson.fromJson(message, HashMap.class);

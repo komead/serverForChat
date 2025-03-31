@@ -12,7 +12,7 @@ public class UserRepository {
     public User getUserByUsername(String username) {
         User user = new User();
 
-        ResultSet resultSet = databaseManager.execute("select * from users where username = '" + username + "';");
+        ResultSet resultSet = databaseManager.select("select * from users where username = '" + username + "';");
 
         try {
             if (!resultSet.next()) {
@@ -32,18 +32,19 @@ public class UserRepository {
     }
 
     public void createUser(User user) {
-        ResultSet resultSet = databaseManager.execute("insert into users(username, password) values('" + user.getUsername() + "','" + user.getPassword() + "');");
+        databaseManager.insert("insert into users(username, password) values('" + user.getUsername() + "','" + user.getPassword() + "');");
     }
 
     public boolean userIsExist(String username) {
-        ResultSet resultSet = databaseManager.execute("select * from users where username = '" + username + "';");
+        ResultSet resultSet = databaseManager.select("select * from users where username = '" + username + "';");
 
         try {
             if (resultSet.next()) {
                 return true;
             }
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
+            System.out.println("Пользователя " + username + " не существует");
         }
         return false;
     }
