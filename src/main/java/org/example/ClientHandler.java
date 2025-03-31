@@ -12,6 +12,7 @@ public class ClientHandler {
     private DataInputStream inputStream;
 
     private boolean authorized = false;
+    private String username;
 
     public void connect(Socket socket) {
         try {
@@ -70,5 +71,13 @@ public class ClientHandler {
 
     public void setAuthorized(boolean authorized) {
         this.authorized = authorized;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 }

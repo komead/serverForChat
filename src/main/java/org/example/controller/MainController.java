@@ -3,7 +3,6 @@ package org.example.controller;
 import com.google.gson.Gson;
 import org.example.ClientHandler;
 import org.example.DatabaseManager;
-import org.example.entity.User;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -48,8 +47,8 @@ public class MainController {
                     clientHandler.connect(socket);
 
                     String message;
-                    HashMap<String, String> map;
-                    HashMap<String, String> buf = new HashMap<>();
+                    HashMap<String, String> messageMap;
+                    // Слушаем клиента, пока он не отключился
                     while (true) {
                         try {
                             message = clientHandler.checkMessage();
@@ -60,39 +59,23 @@ public class MainController {
                             e.printStackTrace();
                             break;
                         }
-                        map = gson.fromJson(message, HashMap.class);
-                        switch (map.get("code")) {
+                        messageMap = gson.fromJson(message, HashMap.class);
+                        // Обрабатываем операцию исходя из её кода
+                        switch (messageMap.get("code")) {
                             case "login":
-                                if (userController.login(map.get("username"), map.get("password"))) {
-                                    buf.put("code", "ok");
-                                    message = gson.toJson(buf);
-                                    sendMessage(clientHandler, message);
-                                } else {
-                                    buf.put("code", "deny");
-                                    buf.put("body", "User not found");
-                                    message = gson.toJson(buf);
-                                    sendMessage(clientHandler, message);
-                                }
+                                loginAction(clientHandler, messageMap);
                                 break;
                             case "register":
-                                if (userController.register(map.get("username"), map.get("password"))) {
-                                    buf.put("code", "ok");
-                                    message = gson.toJson(buf);
-                                    sendMessage(clientHandler, message);
-                                } else {
-                                    buf.put("code", "deny");
-                                    buf.put("body", "User is already registered");
-                                    message = gson.toJson(buf);
-                                    sendMessage(clientHandler, message);
-                                }
+                                registerAction(clientHandler, messageMap);
                                 break;
                             case "message":
+                                System.out.println(messageMap.get("text"));
+                                messageAction(clientHandler, messageMap);
                                 break;
                             default:
                                 System.out.println("Неопознанное действие");
                                 break;
                         }
-                        buf.clear();
                     }
                 }).start();
             }
@@ -103,9 +86,77 @@ public class MainController {
         finish();
     }
 
-    private void sendMessage(ClientHandler clientHandler, String message) {
+    /**
+     * Действие при входе. Пытаемся войти. Собираем сообщение для клиента из результата и причины (при необходимости)
+     * и отправляем.
+     * @param clientHandler
+     * @param messageMap
+     */
+    private void loginAction(ClientHandler clientHandler, HashMap<String, String> messageMap) {
+        HashMap<String, String> buf = new HashMap<>();
+        if (userController.login(messageMap.get("username"), messageMap.get("password"))) {
+            buf.put("code", "ok");
+        } else {
+            buf.put("code", "deny");
+            buf.put("body", "User not found");
+        }
+        clientHandler.setUsername(messageMap.get("username"));
+        sendMessage(clientHandler, gson.toJson(buf));
+    }
+
+    /**
+     * Действие при регистрации. Пытаемся зарегистрироваться. Собираем сообщение для клиента из результата
+     * и причины (при необходимости) и отправляем.
+     * @param clientHandler
+     * @param messageMap
+     */
+    private void registerAction(ClientHandler clientHandler, HashMap<String, String> messageMap) {
+        HashMap<String, String> buf = new HashMap<>();
+        if (userController.register(messageMap.get("username"), messageMap.get("password"))) {
+            buf.put("code", "ok");
+        } else {
+            buf.put("code", "deny");
+            buf.put("body", "User is already registered");
+        }
+        clientHandler.setUsername(messageMap.get("username"));
+        sendMessage(clientHandler, gson.toJson(buf));
+    }
+
+    /**
+     * Действие для обычного сообщения. Проверяем кому адресовано данное сообщение. Если для всех, то пересылаем это
+     * сообщение каждому клиенту. Если для определённого, то ищем получателя среди всех клиентов и отправляем
+     * сообщение только ему.
+     * @param clientHandler
+     * @param messageMap
+     */
+    private void messageAction(ClientHandler clientHandler, HashMap<String, String> messageMap) {
+        String message;
+        messageMap.put("sender", clientHandler.getUsername());
+        if ("all".equals(messageMap.get("receiver"))) {
+            // Отправить всем
+            message = gson.toJson(messageMap);
+            for (ClientHandler client : clients) {
+                sendMessage(client, message);
+            }
+        } else {
+            for (ClientHandler client : clients) {
+                // Отправить только для receiver
+                if (client.getUsername().equals(messageMap.get("sender"))) {
+                    message = gson.toJson(messageMap);
+                    sendMessage(client, message);
+                }
+            }
+        }
+    }
+
+    /**
+     * Метод отправляет сообщение переданному в качестве параметра клиенту.
+     * @param client
+     * @param message
+     */
+    private void sendMessage(ClientHandler client, String message) {
         try {
-            clientHandler.sendMessage(message);
+            client.sendMessage(message);
         } catch (IOException e) {
             System.out.println("Ошибка подключения к клиенту");
             e.printStackTrace();
