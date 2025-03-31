@@ -55,7 +55,7 @@ public class MainController {
                             System.out.println(message);
                         } catch (IOException e) {
                             System.out.println("Клиент " + clientHandler.getUsername() + " отключился");
-                            clientHandler.finish();
+                            logoutAction(clientHandler);
                             break;
                         }
                         messageMap = gson.fromJson(message, HashMap.class);
@@ -93,13 +93,25 @@ public class MainController {
      */
     private void loginAction(ClientHandler clientHandler, HashMap<String, String> messageMap) {
         HashMap<String, String> buf = new HashMap<>();
+
+        for (ClientHandler client : clients) {
+            if (messageMap.get("username").equals(client.getUsername())) {
+                System.out.println("Такой клиент уже подключён");
+                buf.put("code", "deny");
+                buf.put("body", "User is already logged in");
+
+                sendMessage(clientHandler, gson.toJson(buf));
+            }
+        }
+
         if (userController.login(messageMap.get("username"), messageMap.get("password"))) {
             buf.put("code", "ok");
+            clientHandler.setUsername(messageMap.get("username"));
+            clientHandler.setAuthorized(true);
         } else {
             buf.put("code", "deny");
             buf.put("body", "User not found");
         }
-        clientHandler.setUsername(messageMap.get("username"));
         sendMessage(clientHandler, gson.toJson(buf));
     }
 
@@ -113,11 +125,12 @@ public class MainController {
         HashMap<String, String> buf = new HashMap<>();
         if (userController.register(messageMap.get("username"), messageMap.get("password"))) {
             buf.put("code", "ok");
+            clientHandler.setUsername(messageMap.get("username"));
+            clientHandler.setAuthorized(true);
         } else {
             buf.put("code", "deny");
             buf.put("body", "User is already registered");
         }
-        clientHandler.setUsername(messageMap.get("username"));
         sendMessage(clientHandler, gson.toJson(buf));
     }
 
@@ -146,6 +159,16 @@ public class MainController {
                 }
             }
         }
+    }
+
+    /**
+     * Метод закрывает соединение с клиентом, удаляет его из списка клиентов.
+     * @param clientHandler
+     */
+    private void logoutAction(ClientHandler clientHandler) {
+        clientHandler.finish();
+        clientHandler.setAuthorized(false);
+        clients.remove(clientHandler);
     }
 
     /**
