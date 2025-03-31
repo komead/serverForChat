@@ -113,6 +113,7 @@ public class MainController {
             buf.put("body", "User not found");
         }
         sendMessage(clientHandler, gson.toJson(buf));
+        sendUsersList();
     }
 
     /**
@@ -132,6 +133,7 @@ public class MainController {
             buf.put("body", "User is already registered");
         }
         sendMessage(clientHandler, gson.toJson(buf));
+        sendUsersList();
     }
 
     /**
@@ -169,6 +171,22 @@ public class MainController {
         clientHandler.finish();
         clientHandler.setAuthorized(false);
         clients.remove(clientHandler);
+        sendUsersList();
+    }
+
+    private void sendUsersList() {
+        HashMap<String, String> buf = new HashMap<>();
+        StringBuilder stringBuilder = new StringBuilder();
+
+        for (ClientHandler client : clients) {
+            stringBuilder.append(client.getUsername());
+        }
+        buf.put("code", "usersList");
+        buf.put("users", stringBuilder.toString());
+
+        for (ClientHandler client : clients) {
+            sendMessage(client, gson.toJson(buf));
+        }
     }
 
     /**
