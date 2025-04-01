@@ -155,7 +155,7 @@ public class MainController {
         } else {
             for (ClientHandler client : clients) {
                 // Отправить только для receiver
-                if (client.getUsername().equals(messageMap.get("sender"))) {
+                if (client.getUsername().equals(messageMap.get("receiver"))) {
                     message = gson.toJson(messageMap);
                     sendMessage(client, message);
                 }
