@@ -1,7 +1,7 @@
 package org.example.controller;
 
 import com.google.gson.Gson;
-import org.example.ClientHandler;
+import org.example.ClientConnector;
 import org.example.DatabaseManager;
 
 import java.io.IOException;
@@ -15,7 +15,7 @@ import java.util.Vector;
 public class MainController {
     private UserController userController = new UserController();
     private DatabaseManager dbManager;
-    private Vector<ClientHandler> clients = new Vector<>();
+    private Vector<ClientConnector> clients = new Vector<>();
 
     private Gson gson = new Gson();
 
@@ -27,7 +27,7 @@ public class MainController {
         Thread thread = new Thread(() -> {
             Scanner scanner = new Scanner(System.in);
             while (scanner.hasNextLine()) {
-                for (ClientHandler client : clients) {
+                for (ClientConnector client : clients) {
                     sendMessage(client, scanner.nextLine());
                 }
             }
@@ -42,34 +42,34 @@ public class MainController {
 
                 // В отдельном потоке слушаем клиента
                 new Thread(() -> {
-                    ClientHandler clientHandler = new ClientHandler();
-                    clients.add(clientHandler);
-                    clientHandler.connect(socket);
+                    ClientConnector clientConnector = new ClientConnector();
+                    clients.add(clientConnector);
+                    clientConnector.connect(socket);
 
                     String message;
                     HashMap<String, String> messageMap;
                     // Слушаем клиента, пока он не отключился
                     while (true) {
                         try {
-                            message = clientHandler.checkMessage();
+                            message = clientConnector.checkMessage();
                             System.out.println(message);
                         } catch (IOException e) {
-                            System.out.println("Клиент " + clientHandler.getUsername() + " отключился");
-                            logoutAction(clientHandler);
+                            System.out.println("Клиент " + clientConnector.getUsername() + " отключился");
+                            logoutAction(clientConnector);
                             break;
                         }
                         messageMap = gson.fromJson(message, HashMap.class);
                         // Обрабатываем операцию исходя из её кода
                         switch (messageMap.get("code")) {
                             case "login":
-                                loginAction(clientHandler, messageMap);
+                                loginAction(clientConnector, messageMap);
                                 break;
                             case "register":
-                                registerAction(clientHandler, messageMap);
+                                registerAction(clientConnector, messageMap);
                                 break;
                             case "message":
                                 System.out.println(messageMap.get("text"));
-                                messageAction(clientHandler, messageMap);
+                                messageAction(clientConnector, messageMap);
                                 break;
                             default:
                                 System.out.println("Неопознанное действие");
@@ -88,51 +88,51 @@ public class MainController {
     /**
      * Действие при входе. Пытаемся войти. Собираем сообщение для клиента из результата и причины (при необходимости)
      * и отправляем.
-     * @param clientHandler
+     * @param clientConnector
      * @param messageMap
      */
-    private void loginAction(ClientHandler clientHandler, HashMap<String, String> messageMap) {
+    private void loginAction(ClientConnector clientConnector, HashMap<String, String> messageMap) {
         HashMap<String, String> buf = new HashMap<>();
 
-        for (ClientHandler client : clients) {
+        for (ClientConnector client : clients) {
             if (messageMap.get("username").equals(client.getUsername())) {
                 System.out.println("Такой клиент уже подключён");
                 buf.put("code", "deny");
                 buf.put("body", "User is already logged in");
 
-                sendMessage(clientHandler, gson.toJson(buf));
+                sendMessage(clientConnector, gson.toJson(buf));
             }
         }
 
         if (userController.login(messageMap.get("username"), messageMap.get("password"))) {
             buf.put("code", "ok");
-            clientHandler.setUsername(messageMap.get("username"));
-            clientHandler.setAuthorized(true);
+            clientConnector.setUsername(messageMap.get("username"));
+            clientConnector.setAuthorized(true);
         } else {
             buf.put("code", "deny");
             buf.put("body", "User not found");
         }
-        sendMessage(clientHandler, gson.toJson(buf));
+        sendMessage(clientConnector, gson.toJson(buf));
         sendUsersList();
     }
 
     /**
      * Действие при регистрации. Пытаемся зарегистрироваться. Собираем сообщение для клиента из результата
      * и причины (при необходимости) и отправляем.
-     * @param clientHandler
+     * @param clientConnector
      * @param messageMap
      */
-    private void registerAction(ClientHandler clientHandler, HashMap<String, String> messageMap) {
+    private void registerAction(ClientConnector clientConnector, HashMap<String, String> messageMap) {
         HashMap<String, String> buf = new HashMap<>();
         if (userController.register(messageMap.get("username"), messageMap.get("password"))) {
             buf.put("code", "ok");
-            clientHandler.setUsername(messageMap.get("username"));
-            clientHandler.setAuthorized(true);
+            clientConnector.setUsername(messageMap.get("username"));
+            clientConnector.setAuthorized(true);
         } else {
             buf.put("code", "deny");
             buf.put("body", "User is already registered");
         }
-        sendMessage(clientHandler, gson.toJson(buf));
+        sendMessage(clientConnector, gson.toJson(buf));
         sendUsersList();
     }
 
@@ -140,20 +140,20 @@ public class MainController {
      * Действие для обычного сообщения. Проверяем кому адресовано данное сообщение. Если для всех, то пересылаем это
      * сообщение каждому клиенту. Если для определённого, то ищем получателя среди всех клиентов и отправляем
      * сообщение только ему.
-     * @param clientHandler
+     * @param clientConnector
      * @param messageMap
      */
-    private void messageAction(ClientHandler clientHandler, HashMap<String, String> messageMap) {
+    private void messageAction(ClientConnector clientConnector, HashMap<String, String> messageMap) {
         String message;
-        messageMap.put("sender", clientHandler.getUsername());
+        messageMap.put("sender", clientConnector.getUsername());
         if ("all".equals(messageMap.get("receiver"))) {
             // Отправить всем
             message = gson.toJson(messageMap);
-            for (ClientHandler client : clients) {
+            for (ClientConnector client : clients) {
                 sendMessage(client, message);
             }
         } else {
-            for (ClientHandler client : clients) {
+            for (ClientConnector client : clients) {
                 // Отправить только для receiver
                 if (client.getUsername().equals(messageMap.get("receiver"))) {
                     message = gson.toJson(messageMap);
@@ -165,12 +165,12 @@ public class MainController {
 
     /**
      * Метод закрывает соединение с клиентом, удаляет его из списка клиентов.
-     * @param clientHandler
+     * @param clientConnector
      */
-    private void logoutAction(ClientHandler clientHandler) {
-        clientHandler.finish();
-        clientHandler.setAuthorized(false);
-        clients.remove(clientHandler);
+    private void logoutAction(ClientConnector clientConnector) {
+        clientConnector.finish();
+        clientConnector.setAuthorized(false);
+        clients.remove(clientConnector);
         sendUsersList();
     }
 
@@ -178,13 +178,13 @@ public class MainController {
         HashMap<String, String> buf = new HashMap<>();
         StringBuilder stringBuilder = new StringBuilder();
 
-        for (ClientHandler client : clients) {
+        for (ClientConnector client : clients) {
             stringBuilder.append(client.getUsername());
         }
         buf.put("code", "usersList");
         buf.put("users", stringBuilder.toString());
 
-        for (ClientHandler client : clients) {
+        for (ClientConnector client : clients) {
             sendMessage(client, gson.toJson(buf));
         }
     }
@@ -194,7 +194,7 @@ public class MainController {
      * @param client
      * @param message
      */
-    private void sendMessage(ClientHandler client, String message) {
+    private void sendMessage(ClientConnector client, String message) {
         try {
             client.sendMessage(message);
         } catch (IOException e) {

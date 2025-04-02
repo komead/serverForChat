@@ -1,15 +1,14 @@
 package org.example;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
-public class ClientHandler {
+public class ClientConnector {
     private Socket socket;
-    private DataOutputStream outputStream;
-    private DataInputStream inputStream;
+    private OutputStream outputStream;
+    private InputStream inputStream;
 
     private boolean authorized = false;
     private String username;
@@ -17,16 +16,29 @@ public class ClientHandler {
     public void connect(Socket socket) {
         try {
             this.socket = socket;
-            inputStream = new DataInputStream(socket.getInputStream());
-            outputStream = new DataOutputStream(socket.getOutputStream());
+            inputStream = socket.getInputStream();
+            outputStream = socket.getOutputStream();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public String checkMessage() throws IOException {
-        String receivedMessage = "";
-        receivedMessage = inputStream.readUTF();
+        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+
+        // Читаем полученную строку
+        byte[] buffer = new byte[1024];
+        int bytesRead;
+
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            byteStream.write(buffer, 0, bytesRead);
+
+            if (buffer[bytesRead - 1] == '\n') {
+                break;
+            }
+        }
+
+        String receivedMessage = byteStream.toString(StandardCharsets.UTF_8).trim();
 
         return receivedMessage;
     }
@@ -47,7 +59,12 @@ public class ClientHandler {
     }
 
     public void sendMessage(String message) throws IOException {
-        outputStream.writeUTF(message);
+        message += "\n";
+        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        byteStream.write(message.getBytes(StandardCharsets.UTF_8));
+
+        outputStream.write(byteStream.toByteArray());
+        outputStream.flush();
     }
 
     public boolean isConnected() throws ConnectException {
