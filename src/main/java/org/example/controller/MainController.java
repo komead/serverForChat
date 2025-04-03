@@ -43,7 +43,6 @@ public class MainController {
                 // В отдельном потоке слушаем клиента
                 new Thread(() -> {
                     ClientConnector clientConnector = new ClientConnector();
-                    clients.add(clientConnector);
                     clientConnector.connect(socket);
 
                     String message;
@@ -113,6 +112,7 @@ public class MainController {
             buf.put("body", "User not found");
         }
         sendMessage(clientConnector, gson.toJson(buf));
+        clients.add(clientConnector);
         sendUsersList();
     }
 
@@ -133,6 +133,7 @@ public class MainController {
             buf.put("body", "User is already registered");
         }
         sendMessage(clientConnector, gson.toJson(buf));
+        clients.add(clientConnector);
         sendUsersList();
     }
 
@@ -179,7 +180,7 @@ public class MainController {
         StringBuilder stringBuilder = new StringBuilder();
 
         for (ClientConnector client : clients) {
-            stringBuilder.append(client.getUsername());
+            stringBuilder.append(client.getUsername() + ',');
         }
         buf.put("code", "usersList");
         buf.put("users", stringBuilder.toString());
