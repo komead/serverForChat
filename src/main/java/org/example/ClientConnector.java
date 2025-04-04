@@ -59,7 +59,7 @@ public class ClientConnector {
     }
 
     public void sendMessage(String message) throws IOException {
-        message += "\n";
+        message += '\n';
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
         byteStream.write(message.getBytes(StandardCharsets.UTF_8));
 

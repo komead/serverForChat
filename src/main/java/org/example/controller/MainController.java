@@ -112,8 +112,11 @@ public class MainController {
             buf.put("body", "User not found");
         }
         sendMessage(clientConnector, gson.toJson(buf));
-        clients.add(clientConnector);
-        sendUsersList();
+
+        if (buf.get("code").equals("ok")) {
+            clients.add(clientConnector);
+            sendUsersList();
+        }
     }
 
     /**
@@ -133,8 +136,11 @@ public class MainController {
             buf.put("body", "User is already registered");
         }
         sendMessage(clientConnector, gson.toJson(buf));
-        clients.add(clientConnector);
-        sendUsersList();
+
+        if (buf.get("code").equals("ok")) {
+            clients.add(clientConnector);
+            sendUsersList();
+        }
     }
 
     /**
