@@ -3,14 +3,13 @@ package org.example.controller;
 import com.google.gson.Gson;
 import org.example.ClientConnector;
 import org.example.DatabaseManager;
+import org.example.enums.OperationCode;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Scanner;
-import java.util.Vector;
+import java.util.*;
 
 public class MainController {
     private UserController userController = new UserController();
@@ -59,17 +58,20 @@ public class MainController {
                         }
                         messageMap = gson.fromJson(message, HashMap.class);
                         // Обрабатываем операцию исходя из её кода
-                        switch (messageMap.get("code")) {
-                            case "login":
+                        switch (OperationCode.fromValue(messageMap.get("code"))) {
+                            case LOGIN:
                                 loginAction(clientConnector, messageMap);
                                 break;
-                            case "register":
+                            case REGISTRATION:
                                 registerAction(clientConnector, messageMap);
                                 break;
-                            case "message":
+                            case MESSAGE:
                                 System.out.println(messageMap.get("text"));
-                                messageAction(clientConnector, messageMap);
+                                messageAction(messageMap);
                                 break;
+                            case IMAGE:
+                                messageAction(messageMap);
+                            case null:
                             default:
                                 System.out.println("Неопознанное действие");
                                 break;
@@ -96,24 +98,25 @@ public class MainController {
         for (ClientConnector client : clients) {
             if (messageMap.get("username").equals(client.getUsername())) {
                 System.out.println("Такой клиент уже подключён");
-                buf.put("code", "deny");
+                buf.put("code", OperationCode.ACCESS_DENIED.stringValue())  ;
                 buf.put("body", "User is already logged in");
 
                 sendMessage(clientConnector, gson.toJson(buf));
+                return;
             }
         }
 
         if (userController.login(messageMap.get("username"), messageMap.get("password"))) {
-            buf.put("code", "ok");
+            buf.put("code", OperationCode.ACCESS_GRANTED.stringValue());
             clientConnector.setUsername(messageMap.get("username"));
             clientConnector.setAuthorized(true);
         } else {
-            buf.put("code", "deny");
+            buf.put("code", OperationCode.ACCESS_DENIED.stringValue());
             buf.put("body", "User not found");
         }
         sendMessage(clientConnector, gson.toJson(buf));
 
-        if (buf.get("code").equals("ok")) {
+        if (buf.get("code").equals(OperationCode.ACCESS_GRANTED.stringValue())) {
             clients.add(clientConnector);
             sendUsersList();
         }
@@ -127,17 +130,18 @@ public class MainController {
      */
     private void registerAction(ClientConnector clientConnector, HashMap<String, String> messageMap) {
         HashMap<String, String> buf = new HashMap<>();
+
         if (userController.register(messageMap.get("username"), messageMap.get("password"))) {
-            buf.put("code", "ok");
+            buf.put("code", OperationCode.ACCESS_GRANTED.stringValue());
             clientConnector.setUsername(messageMap.get("username"));
             clientConnector.setAuthorized(true);
         } else {
-            buf.put("code", "deny");
+            buf.put("code", OperationCode.ACCESS_DENIED.stringValue());
             buf.put("body", "User is already registered");
         }
         sendMessage(clientConnector, gson.toJson(buf));
 
-        if (buf.get("code").equals("ok")) {
+        if (buf.get("code").equals(OperationCode.ACCESS_GRANTED.stringValue())) {
             clients.add(clientConnector);
             sendUsersList();
         }
@@ -147,23 +151,23 @@ public class MainController {
      * Действие для обычного сообщения. Проверяем кому адресовано данное сообщение. Если для всех, то пересылаем это
      * сообщение каждому клиенту. Если для определённого, то ищем получателя среди всех клиентов и отправляем
      * сообщение только ему.
-     * @param clientConnector
      * @param messageMap
      */
-    private void messageAction(ClientConnector clientConnector, HashMap<String, String> messageMap) {
-        String message;
-        messageMap.put("sender", clientConnector.getUsername());
-        if ("all".equals(messageMap.get("receiver"))) {
+    private void messageAction(HashMap<String, String> messageMap) {
+        String message = gson.toJson(messageMap);
+        if (messageMap.get("receivers").isEmpty()) {
             // Отправить всем
-            message = gson.toJson(messageMap);
             for (ClientConnector client : clients) {
                 sendMessage(client, message);
             }
         } else {
+            // Отправить определённым клиентам
+            HashSet<String> receivers = new HashSet<>();
+            Collections.addAll(receivers, messageMap.get("receivers").split(","));
+            receivers.add(messageMap.get("sender"));
+
             for (ClientConnector client : clients) {
-                // Отправить только для receiver
-                if (client.getUsername().equals(messageMap.get("receiver"))) {
-                    message = gson.toJson(messageMap);
+                if (receivers.contains(client.getUsername())) {
                     sendMessage(client, message);
                 }
             }
@@ -188,7 +192,7 @@ public class MainController {
         for (ClientConnector client : clients) {
             stringBuilder.append(client.getUsername() + ',');
         }
-        buf.put("code", "usersList");
+        buf.put("code", OperationCode.USERS_LIST.stringValue());
         buf.put("users", stringBuilder.toString());
 
         for (ClientConnector client : clients) {
