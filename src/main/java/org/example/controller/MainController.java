@@ -52,7 +52,7 @@ public class MainController {
                             message = clientConnector.checkMessage();
                             System.out.println(message);
                         } catch (IOException e) {
-                            System.out.println("Клиент " + clientConnector.getUsername() + " отключился");
+                            System.out.println("С клиентом " + clientConnector.getUsername() + " потеряно соединение");
                             logoutAction(clientConnector);
                             break;
                         }
@@ -106,17 +106,12 @@ public class MainController {
             }
         }
 
-        if (userController.login(messageMap.get("username"), messageMap.get("password"))) {
-            buf.put("code", OperationCode.ACCESS_GRANTED.stringValue());
-            clientConnector.setUsername(messageMap.get("username"));
-            clientConnector.setAuthorized(true);
-        } else {
-            buf.put("code", OperationCode.ACCESS_DENIED.stringValue());
-            buf.put("body", "User not found");
-        }
+        buf = userController.login(messageMap.get("username"), messageMap.get("password"));
         sendMessage(clientConnector, gson.toJson(buf));
 
         if (buf.get("code").equals(OperationCode.ACCESS_GRANTED.stringValue())) {
+            clientConnector.setUsername(messageMap.get("username"));
+            clientConnector.setAuthorized(true);
             clients.add(clientConnector);
             sendUsersList();
         }
@@ -129,19 +124,13 @@ public class MainController {
      * @param messageMap
      */
     private void registerAction(ClientConnector clientConnector, HashMap<String, String> messageMap) {
-        HashMap<String, String> buf = new HashMap<>();
+        HashMap<String, String> buf = userController.register(messageMap.get("username"), messageMap.get("password"));
 
-        if (userController.register(messageMap.get("username"), messageMap.get("password"))) {
-            buf.put("code", OperationCode.ACCESS_GRANTED.stringValue());
-            clientConnector.setUsername(messageMap.get("username"));
-            clientConnector.setAuthorized(true);
-        } else {
-            buf.put("code", OperationCode.ACCESS_DENIED.stringValue());
-            buf.put("body", "User is already registered");
-        }
         sendMessage(clientConnector, gson.toJson(buf));
 
         if (buf.get("code").equals(OperationCode.ACCESS_GRANTED.stringValue())) {
+            clientConnector.setUsername(messageMap.get("username"));
+            clientConnector.setAuthorized(true);
             clients.add(clientConnector);
             sendUsersList();
         }
@@ -209,8 +198,8 @@ public class MainController {
         try {
             client.sendMessage(message);
         } catch (IOException e) {
-            System.out.println("Ошибка подключения к клиенту");
-            e.printStackTrace();
+            System.out.println("С клиентом " + client.getUsername() + " потеряно соединение");
+            logoutAction(client);
         }
     }
 
@@ -218,7 +207,7 @@ public class MainController {
         try {
             dbManager.disconnect();
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
     }
 }

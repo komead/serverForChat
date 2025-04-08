@@ -1,23 +1,42 @@
 package org.example.controller;
 
 import org.example.entity.User;
+import org.example.enums.OperationCode;
 import org.example.repository.UserRepository;
+
+import java.util.HashMap;
 
 public class UserController {
     private UserRepository userRepository = new UserRepository();
 
-    public boolean login(String username, String password) {
+    public HashMap<String, String> login(String username, String password) {
+        HashMap<String, String> buf = new HashMap<>();
+
         User user = userRepository.getUserByUsername(username);
 
-        if (user == null || !user.getPassword().equals(password)) {
-            return false;
+        if (user == null) {
+            buf.put("code", OperationCode.ACCESS_DENIED.stringValue());
+            buf.put("body", "User not found");
+            return buf;
         }
-        return true;
+
+        if (!user.getPassword().equals(password)) {
+            buf.put("code", OperationCode.ACCESS_DENIED.stringValue());
+            buf.put("body", "Wrong password");
+            return buf;
+        }
+
+        buf.put("code", OperationCode.ACCESS_GRANTED.stringValue());
+        return buf;
     }
 
-    public boolean register(String username, String password) {
+    public HashMap<String, String> register(String username, String password) {
+        HashMap<String, String> buf = new HashMap<>();
+
         if (userRepository.userIsExist(username)) {
-            return false;
+            buf.put("code", OperationCode.ACCESS_DENIED.stringValue());
+            buf.put("body", "User is already registered");
+            return buf;
         }
 
         User user = new User();
@@ -25,6 +44,8 @@ public class UserController {
         user.setPassword(password);
 
         userRepository.createUser(user);
-        return true;
+
+        buf.put("code", OperationCode.ACCESS_GRANTED.stringValue());
+        return buf;
     }
 }
