@@ -71,6 +71,10 @@ public class MainController {
                                 break;
                             case IMAGE:
                                 messageAction(messageMap);
+                                break;
+                            case RECONNECT:
+                                reconnectAction(clientConnector, messageMap.get("username"));
+                                break;
                             case null:
                             default:
                                 System.out.println("Неопознанное действие");
@@ -172,6 +176,11 @@ public class MainController {
         clientConnector.setAuthorized(false);
         clients.remove(clientConnector);
         sendUsersList();
+    }
+
+    private void reconnectAction(ClientConnector client, String username) {
+        client.setUsername(username);
+        clients.add(client);
     }
 
     private void sendUsersList() {
