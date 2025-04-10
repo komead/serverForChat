@@ -16,13 +16,13 @@ public class UserController {
 
         if (user == null) {
             buf.put("code", OperationCode.ACCESS_DENIED.stringValue());
-            buf.put("body", "User not found");
+            buf.put("body", "Пользователь не найден");
             return buf;
         }
 
         if (!user.getPassword().equals(password)) {
             buf.put("code", OperationCode.ACCESS_DENIED.stringValue());
-            buf.put("body", "Wrong password");
+            buf.put("body", "Неверный пароль");
             return buf;
         }
 
@@ -35,7 +35,7 @@ public class UserController {
 
         if (userRepository.userIsExist(username)) {
             buf.put("code", OperationCode.ACCESS_DENIED.stringValue());
-            buf.put("body", "User is already registered");
+            buf.put("body", "Пользователь уже зарегистрирован");
             return buf;
         }
 

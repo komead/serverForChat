@@ -103,7 +103,7 @@ public class MainController {
             if (messageMap.get("username").equals(client.getUsername())) {
                 System.out.println("Такой клиент уже подключён");
                 buf.put("code", OperationCode.ACCESS_DENIED.stringValue())  ;
-                buf.put("body", "User is already logged in");
+                buf.put("body", "Пользователь уже подключён");
 
                 sendMessage(clientConnector, gson.toJson(buf));
                 return;
